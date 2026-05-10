@@ -51,8 +51,10 @@ const preventUnsafeConfig = [
    preventExpandedConfigBuilder('difftool.cmd', 'allowUnsafeDiffExternal'),
    preventExpandedConfigBuilder('diff.textconv', 'allowUnsafeDiffTextConv'),
    preventExpandedConfigBuilder('filter.clean', 'allowUnsafeFilter'),
+   preventExpandedConfigBuilder('filter.process', 'allowUnsafeFilter'),
    preventExpandedConfigBuilder('filter.smudge', 'allowUnsafeFilter'),
    preventExpandedConfigBuilder('gpg.program', 'allowUnsafeGpgProgram'),
+   preventConfigBuilder('include.path', 'allowUnsafeInclude'),
    preventConfigBuilder('init.templateDir', 'allowUnsafeTemplateDir'),
    preventExpandedConfigBuilder('pager.', 'allowUnsafePager'),
    preventExpandedConfigBuilder('merge.driver', 'allowUnsafeMergeDriver'),
@@ -63,4 +65,6 @@ const preventUnsafeConfig = [
    preventExpandedConfigBuilder('remote.uploadpack', 'allowUnsafePack'),
    preventConfigBuilder('uploadpack.packObjectsHook', 'allowUnsafePack'),
    preventConfigBuilder('sequence.editor', 'allowUnsafeEditor'),
+   preventExpandedConfigBuilder('submodule.update', 'allowUnsafeSubmodule'),
+   preventExpandedConfigBuilder('url.insteadOf', 'allowUnsafeUrlRewrite'),
 ];
